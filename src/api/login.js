@@ -1,12 +1,14 @@
 import request from '@/utils/request'
 
-export function login(username, password) {
+export function login(username, password, code, uuid) {
   return request({
     url: '/admin/login',
     method: 'post',
     data: {
       username,
-      password
+      password,
+      code,
+      uuid
     }
   })
 }
@@ -76,5 +78,20 @@ export function allocRole(data) {
     url: '/admin/role/update',
     method: 'post',
     data: data
+  })
+}
+
+export function getCodeImg() {
+  return request({
+    url: '/admin/verification-code',
+    method: 'get'
+  })
+}
+
+export function checkCodeImg(params) {
+  return request({
+    url: '/admin/verify-code',
+    params,
+    method: 'get'
   })
 }

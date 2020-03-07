@@ -9,7 +9,7 @@
         <div style="text-align: center">
           <svg-icon icon-class="login-mall" style="width: 56px;height: 56px;color: #409EFF"></svg-icon>
         </div>
-        <h2 class="login-title color-main">mall-admin-web</h2>
+        <h2 class="login-title color-main">商城管理</h2>
         <el-form-item prop="username">
           <el-input name="username"
                     type="text"
@@ -32,15 +32,32 @@
             <svg-icon icon-class="password" class="color-main"></svg-icon>
           </span>
             <span slot="suffix" @click="showPwd">
-            <svg-icon icon-class="eye" class="color-main"></svg-icon>
+            <svg-icon icon-class="eye" class="color-main" v-if="pwdType==='password'"></svg-icon>
+            <svg-icon icon-class="eyeopen" class="color-main" v-if="pwdType!=='password'"></svg-icon>
           </span>
           </el-input>
+        </el-form-item>
+        <el-form-item prop="code">
+          <el-input name="code"
+                    type="text"
+                    v-model="loginForm.code"
+                    auto-complete="off"
+                    placeholder="请输入验证码"
+                    style="width: 60%"
+                    @change="checkAndValidate"
+                    @keyup.enter.native="handleLogin">
+          <svg-icon slot="prefix" icon-class="verify" class="color-main" />
+          <svg-icon slot="suffix" icon-class="checkmark" class="color-green" v-if="isValidCode" style="width: 1.5em;height: 1.5em;"></svg-icon>
+        </el-input>
+        <div class="login-code">
+          <img :src="codeUrl" @click="getCode">
+        </div>
         </el-form-item>
         <el-form-item style="margin-bottom: 60px;text-align: center">
           <el-button style="width: 45%" type="primary" :loading="loading" @click.native.prevent="handleLogin">
             登录
           </el-button>
-          <el-button style="width: 45%" type="primary" @click.native.prevent="handleTry">
+          <el-button style="width: 45%" type="primary" @click.native.prevent="handleTry" v-if="false">
             获取体验账号
           </el-button>
         </el-form-item>
@@ -68,7 +85,8 @@
 <script>
   import {isvalidUsername} from '@/utils/validate';
   import {setSupport,getSupport,setCookie,getCookie} from '@/utils/support';
-  import login_center_bg from '@/assets/images/login_center_bg.png'
+  import login_center_bg from '@/assets/images/login_center_bg.jpeg'
+  import { getCodeImg, checkCodeImg } from '@/api/login'
 
   export default {
     name: 'login',
@@ -82,19 +100,24 @@
       };
       const validatePass = (rule, value, callback) => {
         if (value.length < 3) {
-          callback(new Error('密码不能小于3位'))
+          callback(new Error('密码不能少于3位'))
         } else {
           callback()
         }
       };
       return {
+        codeUrl: '',
+        isValidCode: false,
         loginForm: {
           username: '',
           password: '',
+          code: '',
+          uuid: ''
         },
         loginRules: {
           username: [{required: true, trigger: 'blur', validator: validateUsername}],
-          password: [{required: true, trigger: 'blur', validator: validatePass}]
+          password: [{required: true, trigger: 'blur', validator: validatePass}],
+          code: [{ required: true, trigger: 'change', message: '验证码不能为空' }]
         },
         loading: false,
         pwdType: 'password',
@@ -104,6 +127,7 @@
       }
     },
     created() {
+      this.getCode()
       this.loginForm.username = getCookie("username");
       this.loginForm.password = getCookie("password");
       if(this.loginForm.username === undefined||this.loginForm.username==null||this.loginForm.username===''){
@@ -114,6 +138,24 @@
       }
     },
     methods: {
+      getCode() {
+        this.loginForm.code = ''
+        this.isValidCode = false
+        getCodeImg().then(res => {
+          this.codeUrl = res.data.img
+          this.loginForm.uuid = res.data.uuid
+        })
+      },
+      checkAndValidate() {
+        this.isValidCode = false
+        // 预检查验证码是否正确
+        if (this.loginForm.code && (this.loginForm.code.length===1 || this.loginForm.code.length===2)) {
+          const {code, uuid} = this.loginForm
+          checkCodeImg({code, uuid}).then(resp => {
+            this.isValidCode = !!resp.data.valid
+          })
+        }
+      },
       showPwd() {
         if (this.pwdType === 'password') {
           this.pwdType = ''
@@ -132,8 +174,8 @@
             this.loading = true;
             this.$store.dispatch('Login', this.loginForm).then(() => {
               this.loading = false;
-              setCookie("username",this.loginForm.username,15);
-              setCookie("password",this.loginForm.password,15);
+              // setCookie("username",this.loginForm.username,15);
+              // setCookie("password",this.loginForm.password,15);
               this.$router.push({path: '/'})
             }).catch(() => {
               this.loading = false
@@ -179,6 +221,22 @@
     height: auto;
     max-width: 100%;
     max-height: 100%;
-    margin-top: 200px;
+    /* margin-top: 200px; */
   }
+
+  .color-green {
+    color: #1afa29;
+  }
+
+  .login-code {
+    width: 33%;
+    display: inline-block;
+    height: 38px;
+    float: right;
+  }
+  .login-code img{
+    cursor: pointer;
+    vertical-align:middle
+  }
+
 </style>
